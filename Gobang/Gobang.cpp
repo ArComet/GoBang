@@ -1,12 +1,14 @@
 ﻿#include "pch.h"
 #include <graphics.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <conio.h>
 #include <string.h>
 #include <iostream>
 #include <stack>
 #include <map>
 #include <windows.h>
+#include <time.h>
 using namespace std;
 
 int N = 30;
@@ -16,7 +18,7 @@ int get_poi(int x) {
 }
 
 int chess[20][20];
-bool wins[20][20][600];
+bool wins[600][20][20];
 int win_tot,win_cnt[600];
 int value[20][20];
 stack<pair<int,int>> chess_record;
@@ -26,21 +28,32 @@ void initwins() {
 	memset(wins, false, sizeof(wins));
 	win_tot = 0;
 	for (int i = 1; i <= 15; i++)
-		for (int j = 1; j <= 11; j++)
+		for (int j = 1; j <= 11; j++) {
+			win_tot++;
 			for (int k = 0; k < 5; k++)
-				wins[i][j+k][++win_tot] = true;
+				wins[win_tot][i][j+k] = true;
+		}
+			
 	for (int i = 1; i <= 11; i++)
-		for (int j = 1; j <= 15; j++)
+		for (int j = 1; j <= 15; j++){
+			win_tot++;
 			for (int k = 0; k < 5; k++)
-				wins[i+k][j][++win_tot] = true;
+				wins[win_tot][i+k][j] = true;
+		}
+			
 	for (int i = 1; i <= 11; i++)
-		for (int j = 1; j <= 11; j++)
+		for (int j = 1; j <= 11; j++) {
+			win_tot++;
 			for (int k = 0; k < 5; k++)
-				wins[i+k][j+k][++win_tot] = true;
+				wins[win_tot][i+k][j+k] = true;
+		}
+			
 	for (int i = 1; i <= 11; i++)
-		for (int j = 5; j <= 15; j++)
+		for (int j = 5; j <= 15; j++) {
+			win_tot++;
 			for (int k = 0; k < 5; k++)
-				wins[i+k][j-k][++win_tot] = true;
+				wins[win_tot][i+k][j-k] = true;
+		}
 }
 
 //评估胜利方案
@@ -49,7 +62,7 @@ void initcnt(int color) {
 	for (int k = 1; k <= win_tot; k++) {
 		for (int i = 1; i <= 15; i++)
 			for (int j = 1; j <= 15; j++) 
-				if (wins[i][j][k]) {
+				if (wins[k][i][j]) {
 					if (chess[i][j] == color) 
 						win_cnt[k]++;
 					if (chess[i][j] == color*(-1))
@@ -61,42 +74,44 @@ void initcnt(int color) {
 //更新评估价值
 void valuing(int color) {
 	memset(value, 0, sizeof(value));
+	//正向价值评估
 	initcnt(color);
 	for (int i=1; i<=15; i++)
 		for (int j=1; j<=15; j++)
-			if (chess[i][j] == 0) {
-				for (int k = 1; k <= win_tot; k++) {
-					switch (win_cnt[k])
-					{
-					case 1:value[i][j] += 320;
-						break;
-					case 2:value[i][j] += 420;
-						break;
-					case 3:value[i][j] += 4200;
-						break;
-					case 4:value[i][j] += 20000;
-						break;
+			if (chess[i][j] == 0)
+				for (int k = 1; k <= win_tot; k++)
+					if (wins[k][i][j]) {
+						switch (win_cnt[k])
+						{
+						case 1:value[i][j] += 320;
+							break;
+						case 2:value[i][j] += 420;
+							break;
+						case 3:value[i][j] += 4200;
+							break;
+						case 4:value[i][j] += 20000;
+							break;
+						}
 					}
-				}
-			}
+	//反向价值评估
 	initcnt(color*(-1));
 	for (int i = 1; i <= 15; i++)
 		for (int j = 1; j <= 15; j++)
-			if (chess[i][j] == 0) {
-				for (int k = 1; k <= win_tot; k++) {
-					switch (win_cnt[k])
-					{
-					case 1:value[i][j] += 200;
-						break;
-					case 2:value[i][j] += 400;
-						break;
-					case 3:value[i][j] += 2000;
-						break;
-					case 4:value[i][j] += 10000;
-						break;
+			if (chess[i][j] == 0)
+				for (int k = 1; k <= win_tot; k++)
+					if (wins[k][i][j]) {
+						switch (win_cnt[k])
+						{
+						case 1:value[i][j] += 200;
+							break;
+						case 2:value[i][j] += 400;
+							break;
+						case 3:value[i][j] += 2000;
+							break;
+						case 4:value[i][j] += 10000;
+							break;
+						}
 					}
-				}
-			}
 }
 
 //最大价值落子
@@ -105,7 +120,7 @@ void makechess(int &x, int &y) {
 	for (int i = 1; i <= 15; i++) 
 		for (int j = 1; j <= 15; j++) 
 			if (chess[i][j] == 0)
-				if ((x == 0 && y == 0) || value[i][j] >= value[x][y]) {
+				if ((x == 0 && y == 0) || value[i][j] > value[x][y]) {
 					x = i;
 					y = j;
 				}
@@ -118,22 +133,23 @@ void initboard() {
 	setfillcolor(BLUE);
 	fillrectangle(0, 0, 600, 600);
 	// 绘制棋盘
-	for (int i = N; i <= 15 * N; i+=N)
+	for (int i = N; i <= 15 * N; i += N)
 		line(i, 30, i, 15 * N);
-	for (int i = N; i <= 15 * N; i+=N)
+	for (int i = N; i <= 15 * N; i += N)
 		line(30, i, 15 * N, i);
 	// 放置棋子
 	for (int i = 1; i <= 15; i ++)
 		for (int j = 1; j <= 15; j++) {
 			if (chess[i][j] == 1) {
 				setfillcolor(WHITE);
-				fillcircle(i*N, j*N, 10);
+				fillcircle(i * N, j * N, 10);
 			}
 			if (chess[i][j] == -1) {
 				setfillcolor(BLACK);
-				fillcircle(i*N, j*N, 10);
+				fillcircle(i * N, j * N, 10);
 			}
 		}
+	outtextxy(110, 550, L"Github:https://github.com/Echohat/GoBang");
 }
 
 //直线and斜线搜索
@@ -144,10 +160,10 @@ int findLine(int x, int y, int dx, int dy, int col) {
 
 //胜利判断
 bool findAll(int x, int y, int col) {
-	if (findLine(x, y, -1, 0, col) + findLine(x, y, 1, 0, col)-1 >= 5) return true;
-	if (findLine(x, y, 0, -1, col) + findLine(x, y, 0, 1, col)-1 >= 5) return true;
-	if (findLine(x, y, -1, -1, col) + findLine(x, y, 1, 1, col)-1 >= 5) return true;
-	if (findLine(x, y, -1, 1, col) + findLine(x, y, 1, -1, col)-1 >= 5) return true;
+	if (findLine(x, y, -1, 0, col) + findLine(x, y, 1, 0, col) - 1 >= 5) return true;
+	if (findLine(x, y, 0, -1, col) + findLine(x, y, 0, 1, col) - 1 >= 5) return true;
+	if (findLine(x, y, -1, -1, col) + findLine(x, y, 1, 1, col) - 1 >= 5) return true;
+	if (findLine(x, y, -1, 1, col) + findLine(x, y, 1, -1, col) - 1 >= 5) return true;
 	return false;
 }
 
@@ -163,10 +179,11 @@ bool findEND() {
 
 int main(){
 	// 初始化
-	initwins();
-	memset(chess, 0, sizeof(chess));
-	initgraph(600, 600);
-	initboard();
+	srand(time(NULL));//预设随机化
+	initwins();//初始化胜利方案
+	memset(chess, 0, sizeof(chess));//清空棋谱
+	initgraph(600, 600);//图形界面
+	initboard();//绘制棋盘
 
 	MOUSEMSG m;	// 定义鼠标消息
 	int chess_color = 1;//当前棋子颜色
@@ -176,7 +193,7 @@ int main(){
 		m = GetMouseMsg();
 		switch (m.uMsg){
 		case WM_LBUTTONDOWN: {
-			int x, y;
+			int x=0, y=0;
 			//按住Ctrl电脑落子
 			if (m.mkCtrl) {
 				if (chess_record.empty()) {
@@ -215,9 +232,9 @@ int main(){
 			if (!chess_record.empty()) {
 				chess[chess_record.top().first][chess_record.top().second] = 0;//删除棋子
 				chess_record.pop();//删除棋子记录
+				initboard();
 				chess_color *= -1;//反转棋子颜色
 				outtextxy(200, 470, (chess_color == 1) ? L"当前执子：白" : L"当前执子：黑");
-				initboard();
 			}
 			break;
 		}
