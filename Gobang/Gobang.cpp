@@ -89,7 +89,7 @@ void valuing(int color) {
 							break;
 						case 3:value[i][j] += 4200;
 							break;
-						case 4:value[i][j] += 20000;
+						case 4:value[i][j] += 200000;
 							break;
 						}
 					}
@@ -108,15 +108,70 @@ void valuing(int color) {
 							break;
 						case 3:value[i][j] += 2000;
 							break;
-						case 4:value[i][j] += 10000;
+						case 4:value[i][j] += 100000;
 							break;
 						}
 					}
+	//下一步价值评估
+	for (int i = 1; i <= 15; i++)
+		for (int j = 1; j <= 15; j++)
+			if (chess[i][j] == 0) {
+				chess[i][j] = color;
+				color *= -1;
+				int val[20][20];
+				memset(val, 0, sizeof(val));
+				//正向价值评估
+				initcnt(color);
+				for (int i = 1; i <= 15; i++)
+					for (int j = 1; j <= 15; j++)
+						if (chess[i][j] == 0)
+							for (int k = 1; k <= win_tot; k++)
+								if (wins[k][i][j]) {
+									switch (win_cnt[k])
+									{
+									case 1:val[i][j] += 320;
+										break;
+									case 2:val[i][j] += 420;
+										break;
+									case 3:val[i][j] += 4200;
+										break;
+									case 4:val[i][j] += 200000;
+										break;
+									}
+								}
+				//反向价值评估
+				initcnt(color*(-1));
+				for (int i = 1; i <= 15; i++)
+					for (int j = 1; j <= 15; j++)
+						if (chess[i][j] == 0)
+							for (int k = 1; k <= win_tot; k++)
+								if (wins[k][i][j]) {
+									switch (win_cnt[k])
+									{
+									case 1:val[i][j] += 200;
+										break;
+									case 2:val[i][j] += 400;
+										break;
+									case 3:val[i][j] += 2000;
+										break;
+									case 4:val[i][j] += 100000;
+										break;
+									}
+								}
+				int val_max = 0;
+				for (int i = 1; i <= 15; i++)
+					for (int j = 1; j <= 15; j++)
+						val_max = max(val_max, val[i][j]);
+				value[i][j] -= val[i][j];
+				chess[i][j] = 0;
+				color *= -1;
+			}
 }
 
-//最大价值落子
-void makechess(int &x, int &y) {
+//最大价值坐标
+void makechess(int &x, int &y,int color) {
 	x = 0; y = 0;
+	valuing(color);
 	for (int i = 1; i <= 15; i++) 
 		for (int j = 1; j <= 15; j++) 
 			if (chess[i][j] == 0)
@@ -149,7 +204,6 @@ void initboard() {
 				fillcircle(i * N, j * N, 10);
 			}
 		}
-	outtextxy(110, 550, L"Github:https://github.com/Echohat/GoBang");
 }
 
 //直线and斜线搜索
@@ -201,9 +255,7 @@ int main(){
 					y = (int)rand() % 14 + 1;
 				}
 				else {
-					initcnt(chess_color);
-					valuing(chess_color);
-					makechess(x, y);
+					makechess(x, y, chess_color);
 				}
 				chess_record.push(make_pair(x, y));//记录棋子坐标
 				chess[x][y] = chess_color;	
